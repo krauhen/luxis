@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 from luxis.core.schemas import Config
 from luxis.utils.logger import logger
@@ -10,6 +11,7 @@ from luxis.core.indexing import IndexManager
 
 
 def run_index_update(config: Config) -> None:
+    start = time.time()
     logger.info("Updating index...")
     idx = IndexManager(
         vector_index_path=settings.vector_index_path,
@@ -56,4 +58,4 @@ def run_index_update(config: Config) -> None:
     combined_files = [str(p) for sublist in all_files for p in sublist]
     idx.prune_missing(combined_files)
 
-    logger.info("Index update complete.")
+    logger.info(f"Index update complete.(Elapsed time: {time.time() - start}s)")
