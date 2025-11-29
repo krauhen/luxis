@@ -1,0 +1,15 @@
+embedding_dim = 1536
+top_k = 10
+
+[[directories]]
+path = "./luxis"
+include = ["**"]
+ignore = [
+    ".venv/**",
+    ".git/**",
+    ".idea/**",
+    "**/__pycache__/**",
+    "**/.cache/**",
+    "**/cache/**",
+    "**/*cache*/**"
+]
