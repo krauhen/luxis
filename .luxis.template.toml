@@ -1,0 +1,35 @@
+[settings]
+ai_provider = "AzureOpenAI"
+log_level = "INFO"
+vector_index_path = "/tmp/luxis/data/vector_index.faiss"
+meta_index_path = "/tmp/luxis/data/meta_index.db"
+
+[azure_settings]
+azure_openai_api_key = ""
+azure_openai_api_version = "2023-05-15"
+azure_openai_endpoint = ""
+azure_openai_deployment = "text-embedding-ada-002"
+azure_openai_model_name = "text-embedding-ada-002"
+
+[openai_settings]
+openai_api_key = ""
+openai_model_name = "text-embedding-ada-002"
+
+[ingest]
+embedding_dim = 1536
+
+[query]
+top_k = 10
+
+[[directories]]
+path = "./luxis"
+include = ["**"]
+ignore = [
+    ".venv/**",
+    ".git/**",
+    ".idea/**",
+    "**/__pycache__/**",
+    "**/.cache/**",
+    "**/cache/**",
+    "**/*cache*/**"
+]

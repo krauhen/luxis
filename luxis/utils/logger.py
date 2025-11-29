@@ -4,7 +4,7 @@ import sys
 
 from http import HTTPStatus
 from loguru import logger
-from luxis.utils.settings import settings
+
 
 level_icons = {
     "DEBUG": "🐞",
@@ -177,14 +177,6 @@ def formatter(record):
     return "|".join([time_str, icon, loc_str + " ", " " + message_str]) + "\n"
 
 
-def pretty_logging():
-    try:
-        for line in str(settings).split("\n"):
-            logger.info(line)
-    except ImportError:
-        pass
-
-
 def setup_logging(log_level="INFO", settings=None):
     if settings and hasattr(settings, "log_level"):
         log_level = settings.log_level
@@ -208,6 +200,3 @@ def setup_logging(log_level="INFO", settings=None):
 
     logging.getLogger("uvicorn.error").handlers = [InterceptHandler()]
     logging.getLogger("uvicorn.access").handlers = [InterceptHandler()]
-
-
-setup_logging(settings.log_level, settings)

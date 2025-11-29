@@ -4,17 +4,17 @@ from pathlib import Path
 
 from luxis.index.vector_index import VectorIndex
 from luxis.index.meta_index import MetaIndex
-from luxis.utils.settings import settings
 from luxis.utils.logger import logger
 from luxis.utils.file_handler import ensure_dir_exists
 
 
 class IndexManager:
-    def __init__(self, vector_index_path: str | None = None, meta_index_path: str | None = None, dim: int = 1536):
-        vector_index_path = vector_index_path or settings.vector_index_path
-        meta_index_path = meta_index_path or settings.meta_index_path
+    def __init__(self, config):
+        vector_index_path = config.settings.vector_index_path
+        meta_index_path = config.settings.meta_index_path
         ensure_dir_exists(Path(vector_index_path).parent)
         ensure_dir_exists(Path(meta_index_path).parent)
+        dim = config.ingest.embedding_dim
         self.vector = VectorIndex(vector_index_path, dim=dim)
         self.meta = MetaIndex(meta_index_path)
         logger.info(f"Vector index initialized at {vector_index_path} (dim={dim})")

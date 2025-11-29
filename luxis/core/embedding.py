@@ -3,19 +3,27 @@ import tiktoken
 
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
-from openai import AsyncAzureOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 from tika import parser
 
-from luxis.utils.settings import settings
 from luxis.utils.logger import logger
+from luxis.core.schemas import AIProviders
 
 
-client = AsyncAzureOpenAI(
-    api_key=settings.azure_openai_api_key.get_secret_value(),
-    api_version=settings.azure_openai_api_version,
-    azure_endpoint=settings.azure_openai_endpoint,
-    azure_deployment=settings.azure_openai_deployment,
-)
+def _build_client(config):
+    if config.settings.ai_provider == AIProviders.AzureOpenAI:
+        s = config.azure_settings
+        return AsyncAzureOpenAI(
+            api_key=s.azure_openai_api_key.get_secret_value(),
+            api_version=s.azure_openai_api_version,
+            azure_endpoint=s.azure_openai_endpoint,
+            azure_deployment=s.azure_openai_deployment,
+        )
+    elif config.settings.ai_provider == AIProviders.OpenAI:
+        s = config.openai_settings
+        return AsyncOpenAI(api_key=s.openai_api_key.get_secret_value())
+    else:
+        raise ValueError(f"Unsupported ai_provider: {config.settings.ai_provider}")
 
 
 def extract_text(path: Path) -> str:
@@ -23,8 +31,8 @@ def extract_text(path: Path) -> str:
     return parsed.get("content", "") or ""
 
 
-async def get_texts_statistics(texts: List[str]) -> Dict[str, Any]:
-    enc = tiktoken.encoding_for_model(settings.azure_openai_model_name)
+async def get_texts_statistics(texts: List[str], model_name: str) -> Dict[str, Any]:
+    enc = tiktoken.encoding_for_model(model_name)
     token_counts = [len(enc.encode(t)) for t in texts]
     lengths = [len(t) for t in texts]
     return {
@@ -36,21 +44,20 @@ async def get_texts_statistics(texts: List[str]) -> Dict[str, Any]:
     }
 
 
-async def embed_texts(texts: List[str], meta_data: Dict[str, Any] | None = None) -> Tuple[bool, List[List[float]]]:
+async def embed_texts(texts: List[str], config, meta_data: Dict[str, Any] | None = None) -> Tuple[bool, List[List[float]]]:
     meta_data = meta_data or {}
+    client = _build_client(config)
+    model_name = (
+        config.azure_settings.azure_openai_model_name
+        if config.settings.ai_provider == AIProviders.AzureOpenAI
+        else config.openai_settings.openai_model_name
+    )
     texts = [t + json.dumps(meta_data) for t in texts]
-
-    stats = await get_texts_statistics(texts)
+    stats = await get_texts_statistics(texts, model_name)
     logger.debug("Embedding batch stats: {}", stats)
-
     if stats["total_tokens_est"] > 8192:
         return False, []
-
-    response = await client.embeddings.create(input=texts, model=settings.azure_openai_model_name)
-
-    if hasattr(response, "usage") and response.usage:
-        logger.debug(f"Token usage: {response.usage.total_tokens}")
-
+    response = await client.embeddings.create(input=texts, model=model_name)
     embeddings = [d.embedding for d in response.data]
     logger.debug(f"Received {len(embeddings)} embeddings.")
     return True, embeddings

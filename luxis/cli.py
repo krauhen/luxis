@@ -2,26 +2,55 @@ import sys
 import tomllib
 import click
 
-from luxis.core.schemas import Config
+from luxis.core.schemas import (
+    Config,
+    Directories,
+    IngestConfig,
+    QueryConfig,
+    GeneralSettings,
+    AzureOpenAISettings,
+    OpenAISettings,
+)
+
 from luxis.services import update, query
-from luxis.utils.logger import logger
+from luxis.utils.logger import logger, setup_logging
 
 
 def load_config(path: str | None):
     if not path:
         logger.info("No configuration specified, using defaults.")
         return Config()
+
     try:
         with open(path, "rb") as f:
-            config = tomllib.load(f)
+            data = tomllib.load(f)
+            cfg_data = {}
+
+            if "settings" in data:
+                cfg_data["settings"] = GeneralSettings(**data["settings"])
+            if "azure_settings" in data:
+                cfg_data["azure_settings"] = AzureOpenAISettings(**data["azure_settings"])
+            if "openai_settings" in data:
+                cfg_data["openai_settings"] = OpenAISettings(**data["openai_settings"])
+            if "ingest" in data:
+                cfg_data["ingest"] = IngestConfig(**data["ingest"])
+            if "query" in data:
+                cfg_data["query"] = QueryConfig(**data["query"])
+            if "directories" in data:
+                cfg_data["directories"] = [Directories(**d) for d in data["directories"]]
+
+            config = Config(**cfg_data)
             logger.info(f"Loaded configuration from {path}")
-            config = Config(**config)
             return config
+
     except FileNotFoundError:
         logger.error(f"Config file not found: {path}")
         sys.exit(1)
     except tomllib.TOMLDecodeError as e:
-        logger.error(f"Invalid TOML syntax in {path}: {e}")
+        logger.error(f"Invalid TOML syntax: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Error loading config: {e}")
         sys.exit(1)
 
 
@@ -36,22 +65,22 @@ def load_config(path: str | None):
 @click.pass_context
 def cli(ctx, config_path):
     ctx.ensure_object(dict)
+    config = load_config(config_path)
+    setup_logging(config.settings.log_level)
     ctx.obj["CONFIG"] = load_config(config_path)
 
 
-@cli.command(help="Scan configured files, hash, embed, and update indices.")
+@cli.command(help="Scan and index files.")
 @click.pass_context
 def index(ctx):
-    config = ctx.obj.get("CONFIG", {})
-    update.run_index_update(config)
+    update.run_index_update(ctx.obj["CONFIG"])
 
 
-@cli.command(help="Query the index with a text string and show similar documents.")
+@cli.command(help="Query the index with a text string.")
 @click.argument("query_text", type=str)
 @click.pass_context
 def query_cmd(ctx, query_text):
-    config = ctx.obj.get("CONFIG", {})
-    query.run_query(query_text, config)
+    query.run_query(query_text, ctx.obj["CONFIG"])
 
 
 def main():
