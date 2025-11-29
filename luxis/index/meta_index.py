@@ -19,7 +19,7 @@ class MetaIndex:
         self.Session = sessionmaker(bind=self.engine)
         self.FileEntry = FileEntry
 
-    def upsert(self, filepath: str, filehash: str) -> int:
+    async def upsert(self, filepath: str, filehash: str) -> int:
         session = self.Session()
         try:
             entry = session.query(FileEntry).filter_by(filepath=filepath).one()
@@ -32,13 +32,13 @@ class MetaIndex:
         session.close()
         return id_
 
-    def get(self, id_: int) -> FileEntry | None:
+    async def get(self, id_: int) -> FileEntry | None:
         session = self.Session()
         obj = session.get(FileEntry, id_)
         session.close()
         return obj
 
-    def get_by_filepath(self, filepath: str) -> FileEntry | None:
+    async def get_by_filepath(self, filepath: str) -> FileEntry | None:
         session = self.Session()
         entry = session.query(FileEntry).filter_by(filepath=filepath).first()
         session.close()

@@ -1,4 +1,7 @@
+import asyncio
 import sys
+import os
+import signal
 import tomllib
 import click
 
@@ -11,50 +14,44 @@ from luxis.core.schemas import (
     AzureOpenAISettings,
     OpenAISettings,
 )
-
 from luxis.services import update, query
 from luxis.utils.logger import logger, setup_logging
+from luxis.utils.pid_handler import read_pid
+from luxis.daemon import run_daemon
 
 
 def load_config(path: str | None):
     if not path:
         logger.info("No configuration specified, using defaults.")
         return Config()
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    cfg_data = {}
+    if "settings" in data:
+        cfg_data["settings"] = GeneralSettings(**data["settings"])
+    if "azure_settings" in data:
+        cfg_data["azure_settings"] = AzureOpenAISettings(**data["azure_settings"])
+    if "openai_settings" in data:
+        cfg_data["openai_settings"] = OpenAISettings(**data["openai_settings"])
+    if "ingest" in data:
+        cfg_data["ingest"] = IngestConfig(**data["ingest"])
+    if "query" in data:
+        cfg_data["query"] = QueryConfig(**data["query"])
+    if "directories" in data:
+        cfg_data["directories"] = [Directories(**d) for d in data["directories"]]
+    if "daemon" in data:
+        from luxis.core.schemas import DaemonConfig
 
-    try:
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-            cfg_data = {}
-
-            if "settings" in data:
-                cfg_data["settings"] = GeneralSettings(**data["settings"])
-            if "azure_settings" in data:
-                cfg_data["azure_settings"] = AzureOpenAISettings(**data["azure_settings"])
-            if "openai_settings" in data:
-                cfg_data["openai_settings"] = OpenAISettings(**data["openai_settings"])
-            if "ingest" in data:
-                cfg_data["ingest"] = IngestConfig(**data["ingest"])
-            if "query" in data:
-                cfg_data["query"] = QueryConfig(**data["query"])
-            if "directories" in data:
-                cfg_data["directories"] = [Directories(**d) for d in data["directories"]]
-
-            config = Config(**cfg_data)
-            logger.info(f"Loaded configuration from {path}")
-            return config
-
-    except FileNotFoundError:
-        logger.error(f"Config file not found: {path}")
-        sys.exit(1)
-    except tomllib.TOMLDecodeError as e:
-        logger.error(f"Invalid TOML syntax: {e}")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Error loading config: {e}")
-        sys.exit(1)
+        cfg_data["daemon"] = DaemonConfig(**data["daemon"])
+    return Config(**cfg_data)
 
 
 @click.group(help="Luxis local indexing tool.")
+def cli():
+    pass
+
+
+@cli.command(help="Start or stop the Luxis daemon service.")
 @click.option(
     "-c",
     "--config",
@@ -62,29 +59,59 @@ def load_config(path: str | None):
     type=click.Path(exists=False, dir_okay=False),
     help="Path to configuration TOML file (luxis.toml)",
 )
-@click.pass_context
-def cli(ctx, config_path):
-    ctx.ensure_object(dict)
+@click.argument("action", type=click.Choice(["start", "stop"]))
+def daemon(config_path, action):
     config = load_config(config_path)
-    ctx.obj["CONFIG"] = config
     setup_logging(config.settings.log_level)
+
+    if action == "start":
+        run_daemon(config)
+        sys.exit(0)
+
+    if action == "stop":
+        pid = asyncio.run(read_pid())
+        if not pid:
+            logger.error("Daemon PID not found.")
+            sys.exit(1)
+        try:
+            os.kill(pid, signal.SIGTERM)
+            logger.success(f"Stopped daemon process (PID {pid})")
+        except ProcessLookupError:
+            logger.warning("Daemon process not running.")
+        sys.exit(0)
 
 
 @cli.command(help="Scan and index files.")
-@click.pass_context
-def index(ctx):
-    update.run_index_update(ctx.obj["CONFIG"])
+@click.option(
+    "-c",
+    "--config",
+    "config_path",
+    type=click.Path(exists=False, dir_okay=False),
+    help="Path to configuration TOML file (luxis.toml)",
+)
+def index(config_path):
+    config = load_config(config_path)
+    setup_logging(config.settings.log_level)
+    asyncio.run(update.run_index_update(config))
 
 
 @cli.command(help="Query the index with a text string.")
+@click.option(
+    "-c",
+    "--config",
+    "config_path",
+    type=click.Path(exists=False, dir_okay=False),
+    help="Path to configuration TOML file (luxis.toml)",
+)
 @click.argument("query_text", type=str)
-@click.pass_context
-def query_cmd(ctx, query_text):
-    query.run_query(query_text, ctx.obj["CONFIG"])
+def query_cmd(config_path, query_text):
+    config = load_config(config_path)
+    setup_logging(config.settings.log_level)
+    asyncio.run(query.run_query(query_text, config))
 
 
 def main():
-    cli(obj={})
+    cli()
 
 
 if __name__ == "__main__":

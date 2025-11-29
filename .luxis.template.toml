@@ -15,6 +15,13 @@ azure_openai_model_name = "text-embedding-ada-002"
 openai_api_key = ""
 openai_model_name = "text-embedding-ada-002"
 
+[daemon]
+host = "127.0.0.1"
+port = 8765
+reload = false
+shutdown_timeout = 10
+base_data_dir = "/tmp/luxis/data"
+
 [ingest]
 embedding_dim = 1536
 

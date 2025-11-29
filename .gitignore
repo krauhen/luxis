@@ -187,6 +187,7 @@ fabric.properties
 
 # CUSTOM
 sandbox
-work/TODO.md
-work/AGENTS.md
+luxis/work/TODO.md
+luxis/work/AGENTS.md
+luxis/work/FEATURES.md
 .luxis.toml

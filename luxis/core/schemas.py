@@ -60,10 +60,19 @@ class GeneralSettings(BaseModel):
     ai_provider: AIProviders = Field(default=AIProviders.OpenAI, description="AI provider selection")
 
 
+class DaemonConfig(BaseModel):
+    host: str = Field(default="127.0.0.1", description="Daemon listen host")
+    port: int = Field(default=8765, description="Daemon listen port")
+    reload: bool = Field(default=False, description="Auto‑reload for development")
+    shutdown_timeout: int = Field(default=10, description="Graceful shutdown wait time (seconds)")
+    base_data_dir: Path = Field(default=Path("/tmp/luxis/data"), description="Base data path")
+
+
 class Config(BaseModel):
     settings: GeneralSettings = Field(default=GeneralSettings(), description="General settings")
     azure_settings: Optional[AzureOpenAISettings] = Field(default=None, description="Azure OpenAI settings")
     openai_settings: Optional[OpenAISettings] = Field(default=None, description="OpenAI settings")
+    daemon: DaemonConfig = Field(default_factory=DaemonConfig, description="Daemon server configuration")
     ingest: IngestConfig = Field(default_factory=IngestConfig, description="Ingestion configuration")
     query: QueryConfig = Field(default_factory=QueryConfig, description="Query configuration")
     directories: List[Directories] = Field(default_factory=lambda: [Directories()])

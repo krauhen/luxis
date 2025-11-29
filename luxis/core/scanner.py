@@ -4,7 +4,7 @@ import itertools
 from pathlib import Path
 
 
-def scan_directories(base: Path, include: list[str], ignore: list[str]) -> list[Path]:
+async def scan_directories(base: Path, include: list[str], ignore: list[str]) -> list[Path]:
     matched = itertools.chain.from_iterable(base.rglob(pattern) for pattern in include)
     result = {Path(f) for f in matched if f.is_file()}
     for pattern in ignore:

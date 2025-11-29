@@ -10,9 +10,12 @@ from luxis.utils.logger import logger
 from luxis.core.schemas import AIProviders
 
 
-def _build_client(config):
+async def _build_client(config):
+    logger.info(f"Connecting to {config.settings.ai_provider}...")
     if config.settings.ai_provider == AIProviders.AzureOpenAI:
         s = config.azure_settings
+        logger.debug(s.azure_openai_api_key.get_secret_value())
+        logger.debug(s)
         return AsyncAzureOpenAI(
             api_key=s.azure_openai_api_key.get_secret_value(),
             api_version=s.azure_openai_api_version,
@@ -21,12 +24,14 @@ def _build_client(config):
         )
     elif config.settings.ai_provider == AIProviders.OpenAI:
         s = config.openai_settings
+        logger.debug(s.openai_api_key.get_secret_value())
+        logger.debug(s)
         return AsyncOpenAI(api_key=s.openai_api_key.get_secret_value())
     else:
         raise ValueError(f"Unsupported ai_provider: {config.settings.ai_provider}")
 
 
-def extract_text(path: Path) -> str:
+async def extract_text(path: Path) -> str:
     parsed = parser.from_file(str(path))
     return parsed.get("content", "") or ""
 
@@ -45,8 +50,9 @@ async def get_texts_statistics(texts: List[str], model_name: str) -> Dict[str, A
 
 
 async def embed_texts(texts: List[str], config, meta_data: Dict[str, Any] | None = None) -> Tuple[bool, List[List[float]]]:
+    token_limit = 8192
     meta_data = meta_data or {}
-    client = _build_client(config)
+    client = await _build_client(config)
     model_name = (
         config.azure_settings.azure_openai_model_name
         if config.settings.ai_provider == AIProviders.AzureOpenAI
@@ -55,7 +61,8 @@ async def embed_texts(texts: List[str], config, meta_data: Dict[str, Any] | None
     texts = [t + json.dumps(meta_data) for t in texts]
     stats = await get_texts_statistics(texts, model_name)
     logger.debug("Embedding batch stats: {}", stats)
-    if stats["total_tokens_est"] > 8192:
+    if stats["total_tokens_est"] > token_limit:
+        logger.info(f"Estimated tokens: {stats['total_tokens_est']} above limit of {token_limit}.")
         return False, []
     response = await client.embeddings.create(input=texts, model=model_name)
     embeddings = [d.embedding for d in response.data]
