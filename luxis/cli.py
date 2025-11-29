@@ -66,8 +66,8 @@ def load_config(path: str | None):
 def cli(ctx, config_path):
     ctx.ensure_object(dict)
     config = load_config(config_path)
+    ctx.obj["CONFIG"] = config
     setup_logging(config.settings.log_level)
-    ctx.obj["CONFIG"] = load_config(config_path)
 
 
 @cli.command(help="Scan and index files.")

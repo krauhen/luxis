@@ -21,7 +21,7 @@ def run_query(text: str, config) -> None:
     if not ids:
         logger.info("No similar documents found.")
         return
-    logger.info(f"\nTop {len(ids)} similar files:")
+    logger.info(f"Top {len(ids)} similar files:")
     for rank, id_ in enumerate(ids, start=1):
         entry = idx.meta.get(id_)
         logger.info(f"{rank:>2}. {entry.filepath}  (hash={entry.filehash})" if entry else f"{rank:>2}. <missing entry id={id_}>")
