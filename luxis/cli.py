@@ -61,14 +61,14 @@ def cli():
 )
 @click.argument("action", type=click.Choice(["start", "stop"]))
 def daemon(config_path, action):
-    config = load_config(config_path)
-    setup_logging(config.settings.log_level)
-
     if action == "start":
+        config = load_config(config_path)
+        setup_logging(config.settings.log_level)
         run_daemon(config)
         sys.exit(0)
 
     if action == "stop":
+        setup_logging()
         pid = asyncio.run(read_pid())
         if not pid:
             logger.error("Daemon PID not found.")

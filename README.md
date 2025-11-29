@@ -50,7 +50,7 @@ INFO:     Uvicorn running on http://127.0.0.1:8765 (Press CTRL+C to quit)
 
 To stop the service:
 ```bash
-$ luxis daemon stop --config .luxis.toml
+$ luxis daemon stop
 ```
 
 ## Features
