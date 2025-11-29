@@ -1,17 +1,12 @@
 # Luxis
-
 Luxis — a local embedding, indexing, and semantic search tool.  
 It scans files, extracts text, embeds content via OpenAI or Azure OpenAI, and enables fast local semantic queries powered by FAISS.
 
 ## Usage
-
 ### Ingest
-
 Performs scanning, embedding, and indexing of files:
-
 ```bash
-$ luxis --config .luxis.toml index
-2025-11-29 11:53:15.575 | INFO     | luxis.cli:load_config:43 - Loaded configuration from .luxis.toml
+$ luxis index --config .luxis.toml
 25-11-29 11:53:15|ℹ️|...s/core/indexing.py:20 | Vector index initialized at /tmp/luxis/data/vector_index.faiss (dim=1536)
 25-11-29 11:53:15|ℹ️|...s/core/indexing.py:21 | Meta index initialized at /tmp/luxis/data/meta_index.db
 25-11-29 11:53:15|ℹ️|...services/update.py:52 | Updating index...
@@ -24,12 +19,9 @@ $ luxis --config .luxis.toml index
 ```
 
 ### Query
-
 Executes a semantic search query over the indexed embeddings:
-
 ```bash
-$ luxis --config .luxis.toml query pydantic_settings
-2025-11-29 11:53:39.972 | INFO     | luxis.cli:load_config:43 - Loaded configuration from .luxis.toml
+$ luxis query "pydantic settings" --config .luxis.toml
 25-11-29 11:53:39|ℹ️|...s/services/query.py:9 | Running query...
 25-11-29 11:53:40|ℹ️|...s/core/indexing.py:20 | Vector index initialized at /tmp/luxis/data/vector_index.faiss (dim=1536)
 25-11-29 11:53:40|ℹ️|...s/core/indexing.py:21 | Meta index initialized at /tmp/luxis/data/meta_index.db
@@ -45,8 +37,23 @@ $ luxis --config .luxis.toml query pydantic_settings
 25-11-29 11:53:41|✅|.../services/query.py:28 | Query completed.
 ```
 
-## Features
+### Daemon
+Runs the Luxis HTTP service daemon for remote operations:
+```bash
+$ luxis daemon start --config .luxis.toml
+25-11-29 13:59:45|ℹ️|...luxis/luxis/daemon.py:97 | Luxis daemon running on 127.0.0.1:8765
+INFO:     Started server process [54457]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8765 (Press CTRL+C to quit)
+```
 
+To stop the service:
+```bash
+$ luxis daemon stop --config .luxis.toml
+```
+
+## Features
 - Configurable through `.toml` configuration file (`luxis.toml`)
 - Supports both **OpenAI** and **Azure OpenAI** via the `openai` Python package
 - Asynchronous batching of text embeddings
@@ -56,6 +63,7 @@ $ luxis --config .luxis.toml query pydantic_settings
 - Vector index using **FAISS**, metadata index using **SQLite**
 - Automatic pruning of missing files from index
 - CLI interface built with **Click**
+- Runs as a local HTTP daemon for background indexing and querying
 - Structured logging via **Loguru**
 - Pydantic-based configuration models:
   - `IngestConfig` (embedding dimension)
@@ -63,20 +71,16 @@ $ luxis --config .luxis.toml query pydantic_settings
   - `GeneralSettings` (index paths, log level, provider type)
 
 ## License
-
 MIT License  
 Copyright (c) 2024  
-
 Permission is hereby granted, free of charge, to any person obtaining a copy  
 of this software and associated documentation files, to deal in the Software  
 without restriction, including without limitation the rights to use, copy,  
 modify, merge, publish, distribute, sublicense, and/or sell copies of the  
 Software, and to permit persons to whom the Software is furnished to do so,  
 subject to the following conditions:  
-
 The above copyright notice and this permission notice shall be included in  
 all copies or substantial portions of the Software.  
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR  
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,  
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE  
@@ -84,7 +88,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING  
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER  
 DEALINGS IN THE SOFTWARE.
-
----
-
-No code files were changed since all TODOs were already resolved — only this `README.md` was updated.
