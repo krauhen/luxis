@@ -11,7 +11,6 @@ from luxis.core.schemas import AIProviders
 
 
 async def _build_client(config):
-    logger.info(f"Connecting to {config.settings.ai_provider}...")
     if config.settings.ai_provider == AIProviders.AzureOpenAI:
         s = config.azure_settings
         logger.debug(s.azure_openai_api_key.get_secret_value())
